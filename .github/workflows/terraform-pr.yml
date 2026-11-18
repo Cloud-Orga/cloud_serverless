@@ -16,12 +16,17 @@ concurrency:
 jobs:
   terraform:
     name: ${{ matrix.stack }} (${{ matrix.env }})
-    runs-on: ubuntu-latest
+    # switch: set the RUNNER variable to the scale set name (arc-runners) to use our runners
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
-        stack: [access, foundation, serverless]
+        stack: [access, foundation, runners, serverless]
         env: [dev, prd]
+        # runners are only deployed in dev for now
+        exclude:
+          - stack: runners
+            env: prd
     # gives the job the environment's variables (WIF_PROVIDER, DEPLOYER_SA)
     environment: ${{ matrix.env }}
     defaults:
