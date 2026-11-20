@@ -21,7 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         stack: [access, foundation, serverless]
-        env: [dev, prd]
+        # prd is only planned on release PRs (dev -> main): feature PRs into dev plan dev only
+        env: ${{ github.base_ref == 'main' && fromJSON('["dev","prd"]') || fromJSON('["dev"]') }}
     # gives the job the environment's variables (WIF_PROVIDER, DEPLOYER_SA)
     environment: ${{ matrix.env }}
     defaults:
