@@ -22,8 +22,8 @@ jobs:
       fail-fast: false
       matrix:
         stack: [access, foundation, runners, serverless]
-        env: [dev, prd]
-        # runners are only deployed in dev for now
+        # prd is only planned on release PRs (dev -> main): feature PRs into dev plan dev only
+        env: ${{ github.base_ref == 'main' && fromJSON('["dev","prd"]') || fromJSON('["dev"]') }}
         exclude:
           - stack: runners
             env: prd
