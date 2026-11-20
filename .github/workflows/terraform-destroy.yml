@@ -20,19 +20,25 @@ permissions:
 
 jobs:
   destroy:
-    name: foundation (${{ inputs.env }})
+    name: ${{ matrix.stack }} (${{ inputs.env }})
     # skipped unless the confirmation matches the chosen environment
     if: inputs.confirm == inputs.env
     # always GitHub-hosted: a self-hosted runner would be deleted along with the cluster
     runs-on: ubuntu-latest
     environment: ${{ inputs.env }}
+    # reverse order of the deploy: the runners leave the cluster before the cluster is deleted
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        stack: [runners, foundation]
     # shared with the deploy workflow: never apply and destroy the same environment at the same time
     concurrency:
       group: terraform-${{ inputs.env }}
       cancel-in-progress: false
     defaults:
       run:
-        working-directory: infra/foundation
+        working-directory: infra/${{ matrix.stack }}
     steps:
       - uses: actions/checkout@v4
 
