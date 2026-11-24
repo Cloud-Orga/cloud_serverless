@@ -39,7 +39,7 @@ CIDR="${3:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEV_PROJECT="servtkt-cloudnative-dev" # projet de dev, tel qu'écrit dans ses fichiers
 
-for stack in access foundation serverless; do
+for stack in access foundation serverless frontend; do
   for f in "backends/dev.hcl" "dev.tfvars"; do
     [ -f "$ROOT/infra/$stack/$f" ] || die "modèle absent : infra/$stack/$f"
   done
@@ -48,7 +48,7 @@ for stack in access foundation serverless; do
   done
 done
 
-for stack in access foundation serverless; do
+for stack in access foundation serverless frontend; do
   dir="$ROOT/infra/$stack"
   sed "s/$DEV_PROJECT/$PROJECT/g" "$dir/backends/dev.hcl" >"$dir/backends/$ENV.hcl"
   sed -E \
@@ -78,7 +78,11 @@ Fichiers créés pour « $ENV » (projet $PROJECT). À faire maintenant, à la m
  5. Créer l'environnement GitHub « $ENV » : variables WIF_PROVIDER et DEPLOYER_SA (sorties de l'étape 4),
     et au moins un relecteur obligatoire.
  6. Ajouter « $ENV » aux matrices des workflows .github/workflows/terraform-pr.yml et terraform-deploy.yml.
- 7. serverless : renseigner cors_allowed_origins (adresse du front) et discord_public_key (clé publique de
-    l'application Discord de cet environnement), sinon la fonction discord-proxy ne démarre pas.
- 8. Le jeton du bot Discord et l'enregistrement des commandes restent manuels (scripts/register_discord_commands.sh).
+ 7. serverless : renseigner discord_public_key (clé publique de l'application Discord de cet environnement),
+    sinon la fonction discord-proxy ne démarre pas. cors_allowed_origins doit contenir l'adresse du front :
+    https://front-<numéro du projet>.<région>.run.app (numéro : gcloud projects describe $PROJECT).
+ 8. Front : variable GitHub DISCORD_CLIENT_ID sur l'environnement « $ENV » (identifiant public de l'application
+    Discord), et l'adresse du front dans les redirections OAuth2 du portail Discord.
+ 9. Déployer : appliquer la stack frontend, puis DISCORD_CLIENT_ID=<id> ./scripts/deploy_site.sh $ENV.
+10. Le jeton du bot Discord et l'enregistrement des commandes restent manuels (scripts/register_discord_commands.sh).
 EOF
