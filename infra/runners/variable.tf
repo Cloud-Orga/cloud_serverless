@@ -43,7 +43,6 @@ variable "github_app_private_key_secret" {
 variable "runner_scale_set_name" {
   type        = string
   description = "Name of the runner scale set, used as the runs-on label in workflows"
-  default     = "arc-runners"
 }
 
 variable "max_runners" {
