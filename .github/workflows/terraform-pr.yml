@@ -16,17 +16,14 @@ concurrency:
 jobs:
   terraform:
     name: ${{ matrix.stack }} (${{ matrix.env }})
-    # switch: set the RUNNER variable to the scale set name (arc-runners) to use our runners
-    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    # switch: set RUNNER_DEV / RUNNER_PRD (repository variables) to a scale set name to use our runners
+    runs-on: ${{ (matrix.env == 'prd' && (vars.RUNNER_PRD || 'ubuntu-latest')) || vars.RUNNER_DEV || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         stack: [access, foundation, runners, serverless]
         # prd is only planned on release PRs (dev -> main): feature PRs into dev plan dev only
         env: ${{ github.base_ref == 'main' && fromJSON('["dev","prd"]') || fromJSON('["dev"]') }}
-        exclude:
-          - stack: runners
-            env: prd
     # gives the job the environment's variables (WIF_PROVIDER, DEPLOYER_SA)
     environment: ${{ matrix.env }}
     defaults:
@@ -41,6 +38,9 @@ jobs:
           service_account: ${{ vars.DEPLOYER_SA }}
 
       - uses: hashicorp/setup-terraform@v3
+        with:
+          # the wrapper needs node in the PATH, which our runner image may not provide
+          terraform_wrapper: false
 
       - name: Format
         run: terraform fmt -check -diff

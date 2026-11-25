@@ -28,12 +28,12 @@ jobs:
     # prd waits for the approval of the prd environment's reviewers
     environment: ${{ inputs.env }}
     # every billable stack, in the reverse order of the deploy: the application, then the runners
-    # (dev only) leave the cluster before the cluster is deleted; access is kept on purpose
+    # leave the cluster before the cluster is deleted; access is kept on purpose
     strategy:
       max-parallel: 1
       fail-fast: true
       matrix:
-        stack: ${{ inputs.env == 'dev' && fromJSON('["serverless","runners","foundation"]') || fromJSON('["serverless","foundation"]') }}
+        stack: [serverless, runners, foundation]
     # shared with the deploy workflow: never apply and destroy the same environment at the same time
     concurrency:
       group: terraform-${{ inputs.env }}

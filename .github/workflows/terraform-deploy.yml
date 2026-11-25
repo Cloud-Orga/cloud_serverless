@@ -75,7 +75,7 @@ jobs:
       max-parallel: 1
       fail-fast: true
       matrix:
-        stack: [foundation, serverless]
+        stack: [foundation, runners, serverless]
     concurrency:
       group: terraform-prd
       cancel-in-progress: false
