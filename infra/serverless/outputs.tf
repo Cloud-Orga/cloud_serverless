@@ -10,3 +10,8 @@ output "api_key" {
   value       = google_apikeys_key.pixel.key_string
   sensitive   = true
 }
+
+output "snapshots_bucket" {
+  description = "Bucket privé des snapshots (un PNG par bloc de 500 x 500 sous tiles/, métadonnées sous meta/)"
+  value       = google_storage_bucket.snapshots.name
+}

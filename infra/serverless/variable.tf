@@ -26,3 +26,9 @@ variable "discord_public_key" {
     error_message = "discord_public_key doit faire 64 caractères hexadécimaux en minuscules."
   }
 }
+
+variable "snapshot_schedule" {
+  description = "Fréquence des snapshots, au format cron (UTC) : toutes les 5 minutes par défaut (sujet)"
+  type        = string
+  default     = "*/5 * * * *"
+}

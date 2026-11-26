@@ -145,6 +145,7 @@ locals {
     "roles/serviceusage.apiKeysAdmin",       # clé API
     "roles/firebaserules.admin",             # règles Firestore
     "roles/storage.admin",                   # bucket des sources des fonctions
+    "roles/cloudscheduler.admin",            # planificateur des snapshots
     "roles/iam.serviceAccountAdmin",         # un compte de service par fonction
     "roles/resourcemanager.projectIamAdmin", # rôles des comptes de service
   ])
