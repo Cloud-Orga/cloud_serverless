@@ -6,7 +6,7 @@ on:
       env:
         description: "Environment to destroy"
         type: choice
-        options: [dev]
+        options: [dev, prd]
         required: true
         default: dev
       confirm:
@@ -20,19 +20,27 @@ permissions:
 
 jobs:
   destroy:
-    name: foundation (${{ inputs.env }})
+    name: ${{ matrix.stack }} (${{ inputs.env }})
     # skipped unless the confirmation matches the chosen environment
     if: inputs.confirm == inputs.env
     # always GitHub-hosted: a self-hosted runner would be deleted along with the cluster
     runs-on: ubuntu-latest
+    # prd waits for the approval of the prd environment's reviewers
     environment: ${{ inputs.env }}
+    # every billable stack, in the reverse order of the deploy: the application, then the runners
+    # leave the cluster before the cluster is deleted; access is kept on purpose
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        stack: [serverless, runners, foundation]
     # shared with the deploy workflow: never apply and destroy the same environment at the same time
     concurrency:
       group: terraform-${{ inputs.env }}
       cancel-in-progress: false
     defaults:
       run:
-        working-directory: infra/foundation
+        working-directory: infra/${{ matrix.stack }}
     steps:
       - uses: actions/checkout@v4
 

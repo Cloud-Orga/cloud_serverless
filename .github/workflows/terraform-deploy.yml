@@ -31,13 +31,13 @@ jobs:
     needs: verify-main
     runs-on: ubuntu-latest
     environment: dev
-    # one stack at a time, in this order: the network before the application
+    # one stack at a time, in this order: the cluster, then the runners on it, then the application
     # (access is not here: it holds the deployer's own rights, applied by hand)
     strategy:
       max-parallel: 1
       fail-fast: true
       matrix:
-        stack: [foundation, serverless]
+        stack: [foundation, runners, serverless]
     # shared with the destroy workflow: never apply and destroy dev at the same time
     concurrency:
       group: terraform-dev
@@ -75,7 +75,7 @@ jobs:
       max-parallel: 1
       fail-fast: true
       matrix:
-        stack: [foundation, serverless]
+        stack: [foundation, runners, serverless]
     concurrency:
       group: terraform-prd
       cancel-in-progress: false
