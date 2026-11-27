@@ -1,0 +1,69 @@
+name: Load runners
+
+# Scaling demo: starts many jobs at once on our self-hosted runners.
+# Each job holds one runner pod; 2 runner pods fit on a runner node, so 6 jobs scale the runner pool from 0 to 3 nodes.
+# When the jobs end, the pods are deleted and the cluster autoscaler removes the idle nodes (back to 0).
+# See docs/scaling-demo.md for what to show while it runs.
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Cluster whose runners to load"
+        type: choice
+        options: [prd, dev]
+        required: true
+        default: prd
+      jobs:
+        description: "Number of parallel jobs (2 per runner node; more than 6 queue up behind maxRunners)"
+        type: number
+        required: true
+        default: 6
+      minutes:
+        description: "How long each job holds its runner"
+        type: number
+        required: true
+        default: 3
+
+# the jobs touch nothing: no repository content, no cloud credentials
+permissions: {}
+
+concurrency:
+  group: load-runners-${{ inputs.env }}
+  cancel-in-progress: true
+
+jobs:
+  # GitHub expressions cannot build a range: this job turns the number of jobs into the list [1, 2, ..., n]
+  plan:
+    name: plan the load
+    runs-on: ubuntu-latest
+    outputs:
+      ids: ${{ steps.ids.outputs.ids }}
+    steps:
+      - id: ids
+        env:
+          JOBS: ${{ inputs.jobs }}
+        run: |
+          if [ "$JOBS" -lt 1 ] || [ "$JOBS" -gt 12 ]; then
+            echo "::error::jobs must be between 1 and 12 (got $JOBS)"
+            exit 1
+          fi
+          echo "ids=[$(seq 1 "$JOBS" | paste -sd, -)]" >> "$GITHUB_OUTPUT"
+
+  load:
+    name: load ${{ matrix.id }} (${{ inputs.env }})
+    needs: plan
+    # the scale set names directly, not the RUNNER_* switch: this demo is about our runners
+    runs-on: ${{ inputs.env == 'prd' && 'arc-runners-prd' || 'arc-runners-dev' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        id: ${{ fromJSON(needs.plan.outputs.ids) }}
+    steps:
+      - name: Hold the runner
+        env:
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          echo "job ${{ matrix.id }} on runner $RUNNER_NAME (pod $(hostname)), $(nproc) CPU"
+          echo "holding the runner for $MINUTES minute(s)"
+          sleep $(( MINUTES * 60 ))
+          echo "done"
