@@ -38,14 +38,19 @@ resource "google_pubsub_subscription" "pixel_events_worker" {
   retain_acked_messages      = true
   message_retention_duration = "604800s"
 
+  # Mesuré (scripts/load_test.py) : quand beaucoup de messages d'un même utilisateur se disputent son document de
+  # limite de débit, les transactions échouent par contention et sont réessayées ; avec 5 tentatives, 15 % des pixels
+  # tombaient en file d'erreurs. 10 tentatives, avec des réessais plus rapprochés (5 s à 2 minutes, soit environ
+  # 10 minutes au total), laissent la contention se résorber avant de renoncer. Ce qui reste en file d'erreurs se
+  # rejoue avec scripts/replay_dlq.py.
   retry_policy {
-    minimum_backoff = "10s"
-    maximum_backoff = "300s"
+    minimum_backoff = "5s"
+    maximum_backoff = "120s"
   }
 
   dead_letter_policy {
     dead_letter_topic     = google_pubsub_topic.pixel_events_dlq.id
-    max_delivery_attempts = 5
+    max_delivery_attempts = 10
   }
 
   # Push : Pub/Sub appelle le worker avec un jeton OIDC (le statut HTTP vaut acquittement)

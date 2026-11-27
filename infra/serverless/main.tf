@@ -37,6 +37,13 @@ module "discord_proxy" {
   # Discord impose 3 secondes : une instance reste chaude pour éviter le démarrage à froid (mesuré > 3 s au premier appel)
   min_instances = 1
 
+  # Plusieurs commandes simultanées doivent tenir dans l'instance chaude : avec une requête par instance, la
+  # deuxième tomberait sur une instance froide et dépasserait les 3 secondes de Discord.
+  # Le code est sûr en concurrence (verrous, tests avec le détecteur de course) ; 1 vCPU est le minimum exigé.
+  concurrency = 40
+  cpu         = "1"
+  memory      = "512M"
+
   # La fonction démarre seulement quand elle a le droit de lire ce secret
   wait_for = concat(
     [google_secret_manager_secret_iam_member.proxy_discord_public_key],
@@ -69,6 +76,11 @@ module "proxy" {
   # Coût : une instance facturée en continu par environnement (comme discord-proxy).
   min_instances = 1
 
+  # Un trait de pinceau envoie un pixel par requête : plusieurs requêtes par instance, comme discord-proxy
+  concurrency = 40
+  cpu         = "1"
+  memory      = "512M"
+
   # les API (Cloud Run, Cloud Functions, Cloud Build) doivent être actives avant la première fonction
   wait_for = values(google_project_service.apis)
 }
@@ -89,6 +101,11 @@ module "get_pixel" {
     ALLOWED_ORIGINS = join(",", var.cors_allowed_origins)
     PALETTE_JSON    = local.palette_json
   }
+
+  # Lecture d'un document : surtout de l'attente réseau, comme draw-pixel
+  concurrency = 40
+  cpu         = "1"
+  memory      = "512M"
 
   wait_for   = values(google_project_service.apis)
   depends_on = [google_firestore_database.main]

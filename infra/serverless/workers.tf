@@ -19,6 +19,18 @@ module "draw_pixel" {
     RATE_LIMIT_PER_MINUTE = tostring(var.rate_limit_per_minute)
   }
 
+  # Mesuré sous 10 000 pixels d'un coup : avec une requête par instance, il fallait ~33 instances en même temps, et
+  # Cloud Run abandonnait les requêtes qui attendaient trop longtemps une instance libre (jusqu'à 1 500 erreurs 5xx par
+  # minute, rattrapées par les réessais de Pub/Sub). Le travail est surtout de l'attente réseau (Firestore) : une
+  # instance peut traiter plusieurs messages à la fois. Le code est sûr en concurrence (client partagé, tests -race).
+  concurrency = 40
+  cpu         = "1"
+  memory      = "512M"
+
+  # Une instance reste chaude : le premier trait après une période calme n'attend pas un démarrage à froid
+  # (le site déclare perdu un pixel qui n'apparaît pas en 20 s)
+  min_instances = 1
+
   wait_for   = values(google_project_service.apis)
   depends_on = [google_firestore_database.main]
 }

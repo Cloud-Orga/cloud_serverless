@@ -22,9 +22,12 @@ func fauxDiscord(t *testing.T, status int, body string) *http.Request {
 
 	old := discordAPI
 	discordAPI = srv.URL
+	// le cache d'identité est global : chaque test repart d'un cache vide
+	resetAuthCache()
 	t.Cleanup(func() {
 		discordAPI = old
 		srv.Close()
+		resetAuthCache()
 	})
 	return received
 }
@@ -105,6 +108,8 @@ func TestDiscordTropLent(t *testing.T) {
 		}
 	}))
 
+	resetAuthCache()
+	defer resetAuthCache()
 	oldAPI, oldClient := discordAPI, discordClient
 	discordAPI = srv.URL
 	discordClient = &http.Client{Timeout: 100 * time.Millisecond}
