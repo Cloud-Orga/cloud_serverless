@@ -102,6 +102,11 @@ module "get_pixel" {
     PALETTE_JSON    = local.palette_json
   }
 
+  # Lecture d'un document : surtout de l'attente réseau, comme draw-pixel
+  concurrency = 40
+  cpu         = "1"
+  memory      = "512M"
+
   wait_for   = values(google_project_service.apis)
   depends_on = [google_firestore_database.main]
 }
