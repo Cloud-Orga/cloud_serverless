@@ -102,6 +102,8 @@ Format: `<type>/<issue-number>-<short-description>`
 4. Open a pull request into `dev` with `Closes #12` in its description.
    The Terraform checks (fmt, validate, plan for dev) run for information: a red check does not block the merge,
    but read it before merging. Release pull requests into `main` run the same checks for prd, which must pass.
+   Pull requests that change `app/` also run the **Tests** workflow (Go vet and tests, frontend lint, typecheck
+   and tests). A red test is a real bug: fix it before merging.
 5. Get **1 approval** from a teammate other than the author.
 6. Merge with **Create a merge commit**, then delete the branch.
 
