@@ -81,7 +81,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	// 5. Écriture : une panne de la base est temporaire, donc 500 (réessai utile)
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	if err := save(ctx, evt, env.Message.PublishTime); errors.Is(err, errRateLimited) {
+	if err := save(ctx, evt, eventTime(env.Message.Attributes, env.Message.PublishTime)); errors.Is(err, errRateLimited) {
 		// pas une panne : réessayer ne servirait à rien. On acquitte, le pixel est abandonné.
 		logger.Warn("pixel abandonné : limite de débit", "message_id", messageID, "correlation_id", correlationID, "user_id", evt.UserID, "x", evt.X, "y", evt.Y)
 		w.WriteHeader(http.StatusOK)
@@ -95,6 +95,21 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	// 6. Acquittement
 	logger.Info("pixel traité", "message_id", messageID, "correlation_id", correlationID, "user_id", evt.UserID, "x", evt.X, "y", evt.Y)
 	w.WriteHeader(http.StatusOK)
+}
+
+// eventTime donne l'heure qui ordonne un message : celle de sa première publication.
+//
+// Un message rejoué depuis la file d'erreurs (scripts/replay_dlq.py) est publié à nouveau, donc avec une heure
+// plus récente. S'il la gardait, il écraserait un pixel que quelqu'un a redessiné entre-temps. L'outil de rejeu
+// recopie donc l'heure d'origine dans l'attribut original_publish_time, et le worker s'en sert.
+// Une heure d'origine dans le futur est ignorée : un message ne peut pas se prétendre plus récent qu'il n'est.
+func eventTime(attrs map[string]string, publishTime time.Time) time.Time {
+	if v := attrs["original_publish_time"]; v != "" {
+		if t, err := time.Parse(time.RFC3339Nano, v); err == nil && !t.After(publishTime) {
+			return t
+		}
+	}
+	return publishTime
 }
 
 func validate(evt drawEvent) string {

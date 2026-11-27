@@ -34,9 +34,9 @@ variable "snapshot_schedule" {
 }
 
 variable "rate_limit_per_minute" {
-  description = "Pixels par minute et par utilisateur (sujet : par exemple 20). Un trait de pinceau envoie un pixel par requête : une valeur trop basse ralentit le pinceau."
+  description = "Pixels par minute et par utilisateur. Le sujet donne 20 en exemple, mais un trait de pinceau envoie un pixel par requête et dépasse vite ce quota (les pixels refusés sont abandonnés sans prévenir le front). 20000 laisse dessiner librement ; la limite se règle par utilisateur avec le champ limit de ratelimits/<utilisateur>."
   type        = number
-  default     = 20
+  default     = 20000
 
   validation {
     condition     = var.rate_limit_per_minute >= 0 && floor(var.rate_limit_per_minute) == var.rate_limit_per_minute

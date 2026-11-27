@@ -19,7 +19,7 @@ variable "min_instances" {
 variable "max_instances" {
   type        = number
   description = "Plafond d'instances : borne la facture si le trafic explose"
-  default     = 3
+  default     = 10
 }
 
 variable "initial_image" {

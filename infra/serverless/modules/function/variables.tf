@@ -60,6 +60,18 @@ variable "max_instances" {
   default     = null
 }
 
+variable "concurrency" {
+  description = "Requêtes traitées en même temps par une instance (null = valeur par défaut de la plateforme, soit 1 pour une fonction de 2e génération). Plus d'une demande au moins 1 vCPU (variable cpu)."
+  type        = number
+  default     = null
+}
+
+variable "cpu" {
+  description = "CPU par instance, par exemple \"1\" (null = déduit de la mémoire : 0,17 vCPU pour 256M). Indispensable à 1 minimum pour que concurrency dépasse 1."
+  type        = string
+  default     = null
+}
+
 variable "env" {
   description = "Variables d'environnement de la fonction"
   type        = map(string)

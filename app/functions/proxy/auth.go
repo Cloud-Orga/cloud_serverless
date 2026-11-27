@@ -15,7 +15,9 @@ var discordClient = &http.Client{Timeout: 2 * time.Second}
 
 var errUnauthorized = errors.New("jeton Discord invalide")
 
-func discordUserID(ctx context.Context, token string) (string, error) {
+// fetchDiscordUserID interroge Discord. Ne pas l'appeler directement : discordUserID garde le résultat en mémoire
+// (un trait de pinceau envoie un pixel par requête, donc un appel à Discord par pixel sans cache).
+func fetchDiscordUserID(ctx context.Context, token string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discordAPI+"/users/@me", nil)
 
 	if err != nil {
