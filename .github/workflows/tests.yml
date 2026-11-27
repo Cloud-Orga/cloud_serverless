@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        function: [admin_cmd, draw_pixel, get_pixel, proxy]
+        function: [admin_cmd, create_snapshot, draw_pixel, get_pixel, proxy, render_grid]
     defaults:
       run:
         working-directory: app/functions/${{ matrix.function }}
