@@ -14,6 +14,9 @@ module "draw_pixel" {
   env = {
     GCP_PROJECT  = var.project_id
     PALETTE_JSON = local.palette_json
+
+    # Pixels par minute et par utilisateur (surchargeable par utilisateur : champ limit de ratelimits/{user})
+    RATE_LIMIT_PER_MINUTE = tostring(var.rate_limit_per_minute)
   }
 
   wait_for   = values(google_project_service.apis)

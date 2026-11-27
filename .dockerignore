@@ -1,0 +1,12 @@
+# Le contexte de construction est la racine du dépôt (le front lit config/palette.json) : on exclut le reste.
+.git
+.github
+infra
+scripts
+docs
+app/functions
+app/frontend/node_modules
+app/frontend/dist
+**/.terraform
+**/tfplan
+*.tfplan
