@@ -27,6 +27,10 @@ module "draw_pixel" {
   cpu         = "1"
   memory      = "512M"
 
+  # Une instance reste chaude : le premier trait après une période calme n'attend pas un démarrage à froid
+  # (le site déclare perdu un pixel qui n'apparaît pas en 20 s)
+  min_instances = 1
+
   wait_for   = values(google_project_service.apis)
   depends_on = [google_firestore_database.main]
 }

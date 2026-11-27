@@ -143,8 +143,8 @@ def cmd_queue(a):
     total = a.users * a.per_user
     if total > 250000:
         sys.exit("trop de pixels : le bloc 19_19 n'a que 250 000 cases")
-    if a.per_user > 20:
-        print("ATTENTION : au-delà de 20 pixels par utilisateur, la limite de débit (20 par minute) en abandonnera une partie")
+    if a.per_user > 20000:
+        print("ATTENTION : au-delà de 20 000 pixels par utilisateur, la limite de débit (20 000 par minute par défaut) en abandonnera une partie")
     msgs = []
     for i in range(total):
         user = i % a.users                      # intercalés : tous les utilisateurs écrivent en même temps
