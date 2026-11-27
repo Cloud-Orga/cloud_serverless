@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       stack:
-        description: "Stack to deploy (all = foundation, runners, then serverless)"
+        description: "Stack to deploy (all = foundation, runners, serverless, frontend, then the site)"
         type: choice
-        options: [all, foundation, runners, serverless]
+        options: [all, foundation, runners, serverless, frontend]
         required: true
         default: all
 
@@ -21,13 +21,13 @@ jobs:
     name: ${{ matrix.stack }} (dev)
     runs-on: ubuntu-latest
     environment: dev
-    # one stack at a time, in this order: the cluster, then the runners on it, then the application
+    # one stack at a time, in this order: the cluster, then the runners on it, then the application, then the site
     # (access is not here: it holds the deployer's own rights, applied by hand)
     strategy:
       max-parallel: 1
       fail-fast: true
       matrix:
-        stack: ${{ inputs.stack == 'all' && fromJSON('["foundation","runners","serverless"]') || fromJSON(format('["{0}"]', inputs.stack)) }}
+        stack: ${{ inputs.stack == 'all' && fromJSON('["foundation","runners","serverless","frontend"]') || fromJSON(format('["{0}"]', inputs.stack)) }}
     # shared with the destroy workflow: never apply and destroy dev at the same time
     concurrency:
       group: terraform-dev
@@ -54,3 +54,12 @@ jobs:
       # applies exactly the plan printed above
       - name: Apply
         run: terraform apply -input=false tfplan
+
+  # the site is built with the addresses of the gateway and of the front: it needs both stacks applied
+  site-dev:
+    name: site (dev)
+    needs: deploy-dev
+    if: inputs.stack == 'all' || inputs.stack == 'frontend'
+    uses: ./.github/workflows/deploy-site.yml
+    with:
+      env: dev

@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: [access, foundation, runners, serverless]
+        stack: [access, foundation, runners, serverless, frontend]
     # gives the job the environment's variables (WIF_PROVIDER, DEPLOYER_SA)
     # prd plans use prd-plan (prd's variables, no required reviewers): a plan changes nothing,
     # so only real prd deployments wait for approval

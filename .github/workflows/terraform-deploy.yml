@@ -34,13 +34,13 @@ jobs:
     needs: verify-main
     runs-on: ubuntu-latest
     environment: prd
-    # one stack at a time, in this order: the cluster, then the runners on it, then the application
+    # one stack at a time, in this order: the cluster, then the runners on it, then the application, then the site
     # (access is not here: it holds the deployer's own rights, applied by hand)
     strategy:
       max-parallel: 1
       fail-fast: true
       matrix:
-        stack: [foundation, runners, serverless]
+        stack: [foundation, runners, serverless, frontend]
     concurrency:
       group: terraform-prd
       cancel-in-progress: false
@@ -66,3 +66,11 @@ jobs:
       # applies exactly the plan printed above
       - name: Apply
         run: terraform apply -input=false tfplan
+
+  # the site image is built with the addresses of the gateway and of the front: it goes after the prd stacks
+  site-prd:
+    name: site (prd)
+    needs: deploy-prd
+    uses: ./.github/workflows/deploy-site.yml
+    with:
+      env: prd

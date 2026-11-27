@@ -54,6 +54,12 @@ variable "min_instances" {
   default     = 0
 }
 
+variable "max_instances" {
+  description = "Plafond d'instances (null = valeur par défaut de la plateforme) ; 1 pour une fonction qui ne doit jamais tourner deux fois en même temps"
+  type        = number
+  default     = null
+}
+
 variable "env" {
   description = "Variables d'environnement de la fonction"
   type        = map(string)
