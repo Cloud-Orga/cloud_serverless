@@ -49,7 +49,7 @@ when the PR is merged. Large work is split into several issues, each with its ow
 
 ```
 feature/12-gke-cluster ──PR──┐
-fix/18-proxy-timeout ────PR──┼──▶ dev ──release PR──▶ main ──tag v0.3.0──▶ deploy dev ──▶ deploy prd
+fix/18-proxy-timeout ────PR──┼──▶ dev ──release PR──▶ main ──tag v0.3.0──▶ deploy prd (after approval)
 docs/20-architecture ────PR──┘
 ```
 
@@ -59,6 +59,19 @@ We have two long-lived branches, both protected (no direct pushes, no force-push
 | --- | --- | --- |
 | `dev` | Integration: the next release is assembled here | Pull requests from short-lived branches |
 | `main` | Released code only, always deployable | Release pull requests from `dev` |
+
+### Environments
+
+| GCP environment | Role | How it changes |
+| --- | --- | --- |
+| `dev` | **Sandbox**: where we test our work before releasing it | The **Terraform Deploy Dev** workflow, run by hand from any branch; never by a release |
+| `prd` | The reference, live for the defense | Only by a release tag, after approval |
+
+Testing in the dev sandbox:
+
+- Say in the team chat before applying a stack in dev, so we don't overwrite each other's work.
+- Run `terraform plan` first and read it: anything it destroys may be a teammate's work.
+- What lives only in dev is not released: it reaches prd only through a pull request and a release.
 
 - All work happens on short-lived branches created from an up-to-date `dev`.
 - A branch is merged into `dev` through a pull request only.
@@ -87,7 +100,8 @@ Format: `<type>/<issue-number>-<short-description>`
 2. Keep the branch short-lived: one topic, merged within a few days.
 3. If `dev` moves ahead, update your branch with `git merge dev` before asking for review.
 4. Open a pull request into `dev` with `Closes #12` in its description.
-   The Terraform checks (fmt, validate, plan for dev and prd) must pass.
+   The Terraform checks (fmt, validate, plan for dev) run for information: a red check does not block the merge,
+   but read it before merging. Release pull requests into `main` run the same checks for prd, which must pass.
 5. Get **1 approval** from a teammate other than the author.
 6. Merge with **Create a merge commit**, then delete the branch.
 
@@ -177,5 +191,5 @@ Check a commit with `git log --show-signature -1`.
      git tag -s v0.4.0 -m "v0.4.0"
      git push origin v0.4.0
      ```
-- Pushing the tag deploys to the dev environment, then to prd after approval.
+- Pushing the tag deploys to prd after approval. The dev environment is not deployed by a release.
 - A fix needed on `main` is still made on a `fix/` branch from `dev`, then released the same way as a `PATCH` version.

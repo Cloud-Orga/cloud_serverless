@@ -1,7 +1,10 @@
 name: Terraform PR
 
+# PRs into dev plan the dev sandbox: informative only, not a required check, so a red run does not block the merge.
+# Release PRs into main plan prd: they show what the release will change there, and are required to pass.
 on:
   pull_request:
+    branches: [dev, main]
     paths: ["infra/**", ".github/workflows/terraform-pr.yml"]
   workflow_dispatch:
 
@@ -13,19 +16,23 @@ concurrency:
   group: terraform-pr-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # the environment this PR is checked against: prd for a release PR into main, dev otherwise
+  TARGET: ${{ github.base_ref == 'main' && 'prd' || 'dev' }}
+
 jobs:
   terraform:
-    name: ${{ matrix.stack }} (${{ matrix.env }})
+    name: ${{ matrix.stack }} (${{ github.base_ref == 'main' && 'prd' || 'dev' }})
     # switch: set RUNNER_DEV / RUNNER_PRD (repository variables) to a scale set name to use our runners
-    runs-on: ${{ (matrix.env == 'prd' && (vars.RUNNER_PRD || 'ubuntu-latest')) || vars.RUNNER_DEV || 'ubuntu-latest' }}
+    runs-on: ${{ (github.base_ref == 'main' && (vars.RUNNER_PRD || 'ubuntu-latest')) || vars.RUNNER_DEV || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         stack: [access, foundation, runners, serverless]
-        # prd is only planned on release PRs (dev -> main): feature PRs into dev plan dev only
-        env: ${{ github.base_ref == 'main' && fromJSON('["dev","prd"]') || fromJSON('["dev"]') }}
     # gives the job the environment's variables (WIF_PROVIDER, DEPLOYER_SA)
-    environment: ${{ matrix.env }}
+    # prd plans use prd-plan (prd's variables, no required reviewers): a plan changes nothing,
+    # so only real prd deployments wait for approval
+    environment: ${{ github.base_ref == 'main' && 'prd-plan' || 'dev' }}
     defaults:
       run:
         working-directory: infra/${{ matrix.stack }}
@@ -46,11 +53,11 @@ jobs:
         run: terraform fmt -check -diff
 
       - name: Init
-        run: terraform init -input=false -backend-config=backends/${{ matrix.env }}.hcl
+        run: terraform init -input=false -backend-config=backends/${{ env.TARGET }}.hcl
 
       - name: Validate
         run: terraform validate
 
       # -lock=false : un plan en PR ne modifie rien, il ne doit pas bloquer un apply en cours
       - name: Plan
-        run: terraform plan -input=false -lock=false -var-file=${{ matrix.env }}.tfvars
+        run: terraform plan -input=false -lock=false -var-file=${{ env.TARGET }}.tfvars

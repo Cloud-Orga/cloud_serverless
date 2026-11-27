@@ -1,0 +1,56 @@
+name: Terraform Deploy Dev
+
+# Manual deployment to the dev sandbox, from any branch ("Use workflow from" in the Run workflow menu).
+# Releases never touch dev: this is how a branch is tested there through the pipeline instead of a laptop.
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: "Stack to deploy (all = foundation, runners, then serverless)"
+        type: choice
+        options: [all, foundation, runners, serverless]
+        required: true
+        default: all
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-dev:
+    name: ${{ matrix.stack }} (dev)
+    runs-on: ubuntu-latest
+    environment: dev
+    # one stack at a time, in this order: the cluster, then the runners on it, then the application
+    # (access is not here: it holds the deployer's own rights, applied by hand)
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        stack: ${{ inputs.stack == 'all' && fromJSON('["foundation","runners","serverless"]') || fromJSON(format('["{0}"]', inputs.stack)) }}
+    # shared with the destroy workflow: never apply and destroy dev at the same time
+    concurrency:
+      group: terraform-dev
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: infra/${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Init
+        run: terraform init -input=false -backend-config=backends/dev.hcl
+
+      - name: Plan
+        run: terraform plan -input=false -var-file=dev.tfvars -out=tfplan
+
+      # applies exactly the plan printed above
+      - name: Apply
+        run: terraform apply -input=false tfplan
