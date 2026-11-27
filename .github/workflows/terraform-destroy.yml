@@ -27,13 +27,13 @@ jobs:
     runs-on: ubuntu-latest
     # prd waits for the approval of the prd environment's reviewers
     environment: ${{ inputs.env }}
-    # every billable stack, in the reverse order of the deploy: the application, then the runners
+    # every billable stack, in the reverse order of the deploy: the site, the application, then the runners
     # leave the cluster before the cluster is deleted; access is kept on purpose
     strategy:
       max-parallel: 1
       fail-fast: true
       matrix:
-        stack: [serverless, runners, foundation]
+        stack: [frontend, serverless, runners, foundation]
     # shared with the deploy workflow: never apply and destroy the same environment at the same time
     concurrency:
       group: terraform-${{ inputs.env }}
