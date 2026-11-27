@@ -127,6 +127,16 @@ def count_pixels(project, tok):
     return int(res[0]["result"]["aggregateFields"]["n"]["integerValue"])
 
 
+def set_limits(project, tok, users, limit):
+    """Fixe la limite de débit des utilisateurs de test, sans toucher aux autres (champ limit seulement)."""
+    base = f"projects/{project}/databases/(default)/documents/ratelimits"
+    for i in range(0, users, 400):
+        writes = [{"update": {"name": f"{base}/{USER_PREFIX}{u}", "fields": {"limit": {"integerValue": str(limit)}}},
+                   "updateMask": {"fieldPaths": ["limit"]}} for u in range(i, min(i + 400, users))]
+        api(f"https://firestore.googleapis.com/v1/projects/{project}/databases/(default)/documents:batchWrite", project, tok, {"writes": writes})
+    print(f"limite de débit fixée à {limit} pixels par minute pour {users} utilisateur(s) de test")
+
+
 def cmd_queue(a):
     project = PROJECTS[a.env]
     tok = token()
@@ -142,6 +152,8 @@ def cmd_queue(a):
             "x": BASE + (i % 500), "y": BASE + (i // 500), "color": 1 + (i % 16), "user_id": f"{USER_PREFIX}{user}"}).encode()).decode(),
             "attributes": {"correlation_id": f"load-{i}"}})
     print(f"{total} pixels, {a.users} utilisateurs, projet {project}")
+    if a.limit_override is not None:
+        set_limits(project, tok, a.users, a.limit_override)
     before = count_pixels(project, tok)
     start = now()
     t0 = time.time()
@@ -237,6 +249,28 @@ def cmd_http(a):
 
 # ---- nettoyage --------------------------------------------------------------------------------------------
 
+def drain_dlq(project, tok):
+    """Acquitte les messages de test (user_id « load-* ») de la file d'erreurs ; laisse les autres intacts."""
+    sub = f"https://pubsub.googleapis.com/v1/projects/{project}/subscriptions/pixel-events-dlq-hold"
+    removed = 0
+    for _ in range(200):  # garde-fou : jamais de boucle sans fin
+        msgs = api(sub + ":pull", project, tok, {"maxMessages": 1000}).get("receivedMessages", [])
+        if not msgs:
+            break
+        mine = []
+        for m in msgs:
+            try:
+                user = json.loads(base64.b64decode(m["message"]["data"])).get("user_id", "")
+            except ValueError:
+                continue
+            if str(user).startswith(USER_PREFIX):
+                mine.append(m["ackId"])
+        if mine:
+            api(sub + ":acknowledge", project, tok, {"ackIds": mine})
+            removed += len(mine)
+    return removed
+
+
 def cmd_cleanup(a):
     project = PROJECTS[a.env]
     tok = token()
@@ -268,6 +302,8 @@ def cmd_cleanup(a):
             break
     for i in range(0, len(names), 400):
         api(f"{base}:batchWrite", project, tok, {"writes": [{"delete": n} for n in names[i:i + 400]]})
+    dlq = drain_dlq(project, tok)
+    print(f"{dlq} message(s) de test retiré(s) de la file d'erreurs.")
     print(f"{deleted} pixels et {len(names)} compteurs supprimés sur {project}. Pensez à retirer tiles/19_19.png du bucket des snapshots (il contient les pixels de test).")
 
 
@@ -282,6 +318,9 @@ def main():
             s.add_argument("--users", type=int, default=1000)
             s.add_argument("--per-user", type=int, default=5)
             s.add_argument("--rate", type=int, default=0, help="messages par seconde (0 = le plus vite possible)")
+            s.add_argument("--limit-override", type=int, default=None,
+                           help="limite de pixels par minute pour les utilisateurs de test (champ limit de ratelimits/<utilisateur>) : "
+                                "ne touche ni à la configuration ni aux vrais utilisateurs ; supprimé par cleanup")
             s.add_argument("--publishers", type=int, default=8)
             s.add_argument("--timeout", type=int, default=600)
         if name == "http":

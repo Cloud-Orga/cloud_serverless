@@ -31,7 +31,7 @@ resource "google_monitoring_alert_policy" "pixel_queue_late" {
 
   documentation {
     mime_type = "text/markdown"
-    content   = "Les pixels s'accumulent dans `pixel-events` : `draw-pixel` ne suit pas. Regarder, sur le tableau de bord, les instances de `draw-pixel` (montée en charge) et les erreurs 5xx. Les messages ne sont pas perdus : ils attendent, et partent en DLQ après 5 échecs."
+    content   = "Les pixels s'accumulent dans `pixel-events` : `draw-pixel` ne suit pas. Regarder, sur le tableau de bord, les instances de `draw-pixel` (montée en charge) et les erreurs 5xx. Les messages ne sont pas perdus : ils attendent, et partent en DLQ après 10 échecs."
   }
 
   notification_channels = local.channels
@@ -66,7 +66,7 @@ resource "google_monitoring_alert_policy" "dlq_not_empty" {
 
   documentation {
     mime_type = "text/markdown"
-    content   = "Un message a échoué 5 fois et attend dans une souscription `*-dlq-hold` (gardé 7 jours). Lire le message pour comprendre l'échec, puis le rejouer ou l'acquitter. Un événement invalide (hors grille, couleur inconnue) y arrive aussi."
+    content   = "Un message a épuisé ses tentatives (10 pour les pixels, 5 pour les snapshots) et attend dans une souscription `*-dlq-hold` (gardé 7 jours). Pour le rejouer : `scripts/replay_dlq.py --queue pixel --dry-run`, puis sans `--dry-run`. Lire le message pour comprendre l'échec, puis le rejouer ou l'acquitter. Un événement invalide (hors grille, couleur inconnue) y arrive aussi."
   }
 
   notification_channels = local.channels

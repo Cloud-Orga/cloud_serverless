@@ -194,14 +194,14 @@
       {
         "title": "",
         "text": {
-          "content": "## Files d'attente (Pub/Sub)\nLa file amortit les rafales : sous charge, les messages attendent au lieu d'être perdus. Un retard qui grandit = les workers ne suivent pas ; un message en DLQ = un échec après 5 tentatives.",
+          "content": "## Files d'attente (Pub/Sub)\nLa file amortit les rafales : sous charge, les messages attendent au lieu d'être perdus. Un retard qui grandit = les workers ne suivent pas ; un message en DLQ = un échec après toutes les tentatives (10 pour les pixels).",
           "format": "MARKDOWN"
         }
       },
       {
         "title": "",
         "text": {
-          "content": "**Rejeu** : les souscriptions gardent leurs messages 7 jours (`seek` pour rejouer). Les messages en échec attendent dans les souscriptions `*-dlq-hold`.",
+          "content": "**Rejeu** : les souscriptions gardent leurs messages 7 jours (`seek` pour rejouer). Les messages en échec attendent dans les souscriptions `*-dlq-hold` ; `scripts/replay_dlq.py --queue pixel` les remet dans la file d'origine.",
           "format": "MARKDOWN"
         }
       },
