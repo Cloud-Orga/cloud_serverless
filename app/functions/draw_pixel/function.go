@@ -5,6 +5,7 @@ package drawpixel
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -80,7 +81,12 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	// 5. Écriture : une panne de la base est temporaire, donc 500 (réessai utile)
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	if err := save(ctx, evt, env.Message.PublishTime); err != nil {
+	if err := save(ctx, evt, env.Message.PublishTime); errors.Is(err, errRateLimited) {
+		// pas une panne : réessayer ne servirait à rien. On acquitte, le pixel est abandonné.
+		logger.Warn("pixel abandonné : limite de débit", "message_id", messageID, "correlation_id", correlationID, "user_id", evt.UserID, "x", evt.X, "y", evt.Y)
+		w.WriteHeader(http.StatusOK)
+		return
+	} else if err != nil {
 		logger.Error("écriture impossible", "message_id", messageID, "correlation_id", correlationID, "error", err.Error())
 		http.Error(w, "écriture impossible", http.StatusInternalServerError)
 		return
