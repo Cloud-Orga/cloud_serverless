@@ -26,60 +26,16 @@ jobs:
             exit 1
           fi
 
-  deploy-dev:
-    name: ${{ matrix.stack }} (dev)
-    needs: verify-main
-    runs-on: ubuntu-latest
-    environment: dev
-    # one stack at a time, in this order: the cluster, then the runners on it, then the application
-    # (access is not here: it holds the deployer's own rights, applied by hand)
-    strategy:
-      max-parallel: 1
-      fail-fast: true
-      matrix:
-        stack: [foundation, runners, serverless, frontend]
-    # shared with the destroy workflow: never apply and destroy dev at the same time
-    concurrency:
-      group: terraform-dev
-      cancel-in-progress: false
-    defaults:
-      run:
-        working-directory: infra/${{ matrix.stack }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.DEPLOYER_SA }}
-
-      - uses: hashicorp/setup-terraform@v3
-
-      - name: Init
-        run: terraform init -input=false -backend-config=backends/dev.hcl
-
-      - name: Plan
-        run: terraform plan -input=false -var-file=dev.tfvars -out=tfplan
-
-      # applies exactly the plan printed above
-      - name: Apply
-        run: terraform apply -input=false tfplan
-
-  # l'image du front est construite avec les adresses de la gateway et du front : elle part après les stacks de dev
-  site-dev:
-    name: site (dev)
-    needs: deploy-dev
-    uses: ./.github/workflows/deploy-site.yml
-    with:
-      env: dev
-
-  # prd : seulement après le déploiement de dev, et après l'approbation des relecteurs de l'environnement prd
+  # A release deploys prd only, after the approval of the prd environment's reviewers.
+  # The dev environment is the team's sandbox: it is applied by hand and never touched by a release,
+  # so a release cannot overwrite work being tested there.
   deploy-prd:
     name: ${{ matrix.stack }} (prd)
-    # prd ne démarre que si tout dev, site compris, a réussi
-    needs: [deploy-dev, site-dev]
+    needs: verify-main
     runs-on: ubuntu-latest
     environment: prd
+    # one stack at a time, in this order: the cluster, then the runners on it, then the application, then the site
+    # (access is not here: it holds the deployer's own rights, applied by hand)
     strategy:
       max-parallel: 1
       fail-fast: true
@@ -111,6 +67,7 @@ jobs:
       - name: Apply
         run: terraform apply -input=false tfplan
 
+  # the site image is built with the addresses of the gateway and of the front: it goes after the prd stacks
   site-prd:
     name: site (prd)
     needs: deploy-prd
